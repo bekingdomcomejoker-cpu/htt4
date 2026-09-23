@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: omega-hub
+    runtime: node
+    plan: free
+    buildCommand: npm ci --no-audit --no-fund
+    startCommand: node hub/vps.mjs
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OMEGA_HUB_KEY
+        sync: false
+      - key: OMEGA_VPS_HOST
+        value: 0.0.0.0
+      - key: OMEGA_VPS_PORT
+        value: 10000
+    domains: []

@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Omega VPS",
+      "hasCanvas": false,
+      "bodyTextLen": 1665,
+      "bodyTextHash": "03bec2cbf981f66c04d633afb63f463dd49a223dd5909e77a535eaae4083d623",
+      "bodyTextPrefix": "OMEGA MESH VPS Both directions are live. This sandbox is the hub",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Omega VPS",
+      "hasCanvas": false,
+      "bodyTextLen": 1657,
+      "bodyTextHash": "fc0c75b9b4279b490dda85722dc9335b1ea66e5ff4447c17a6dba3fa5ab130ea",
+      "bodyTextPrefix": "OMEGA MESH VPS Both directions are live. This sandbox is the hub",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}

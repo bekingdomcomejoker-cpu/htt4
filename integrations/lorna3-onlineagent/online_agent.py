@@ -1,0 +1,232 @@
+"""Online agent adapter — local agent command surface, Forge LLM brain.
+
+Usage (Lorna3):
+  @onlineagent <prompt>
+  @oa <prompt>
+
+Usage (LORNA2 style, once registered):
+  lorna2 --node onlineagent --quiet -p "<prompt>"
+
+Default online model: Claude Sonnet 4.6 (Forge / OpenAI-compatible chat).
+
+Env (Termux only — never commit):
+  ONLINE_AGENT_MODEL   default: claude-sonnet-4-6
+  ONLINE_AGENT_BASE_URL  OpenAI-compatible base, e.g. https://api.manus.im/.../v1
+  ONLINE_AGENT_API_KEY   Bearer token / Forge key
+  ONLINE_AGENT_SYSTEM    optional override of system prompt
+
+Optional fallback: if ONLINE_AGENT_* is unset, tries FORGE_* / MANUS_FORGE_* names.
+"""
+from __future__ import annotations
+
+import json
+import os
+import time
+import urllib.error
+import urllib.request
+from typing import Any
+
+from adapters.base import BrowserReply
+from config.errors import (
+    EMPTY_PROMPT,
+    RESPONSE_TIMEOUT,
+    UPSTREAM_ERROR,
+    error_reply,
+)
+
+ONLINE_AUTH_FAILED = "ONLINE_AGENT_AUTH_FAILED"
+ONLINE_BAD_RESPONSE = "ONLINE_AGENT_BAD_RESPONSE"
+ONLINE_CONFIG = "ONLINE_AGENT_CONFIG"
+ONLINE_RATE_LIMITED = "ONLINE_AGENT_RATE_LIMITED"
+ONLINE_REJECTED = "ONLINE_AGENT_REJECTED"
+
+DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_SYSTEM = (
+    "You are the operator's local OMEGA / LORNA online agent. "
+    "You run on their Termux mesh with access to their home lab context. "
+    "Be precise, security-conscious, and practical. "
+    "Prefer split-tunnel / read-only steps before destructive network changes. "
+    "If you propose shell commands, mark them clearly in fenced bash blocks "
+    "and assume the operator must approve execution."
+)
+
+
+def _env(*names: str, default: str = "") -> str:
+    for name in names:
+        value = (os.environ.get(name) or "").strip()
+        if value:
+            return value
+    return default
+
+
+class OnlineAgentAdapter:
+    """Forge-backed inference for the local agent node surface."""
+
+    name = "onlineagent"
+    node = 11
+
+    def __init__(self) -> None:
+        self.model = _env("ONLINE_AGENT_MODEL", "FORGE_MODEL", default=DEFAULT_MODEL)
+        self.base_url = _env(
+            "ONLINE_AGENT_BASE_URL",
+            "FORGE_BASE_URL",
+            "MANUS_FORGE_BASE_URL",
+            "OPENAI_BASE_URL",
+            default="",
+        ).rstrip("/")
+        self.api_key = _env(
+            "ONLINE_AGENT_API_KEY",
+            "FORGE_API_KEY",
+            "MANUS_FORGE_API_KEY",
+            "OPENAI_API_KEY",
+            default="",
+        )
+        self.system = _env("ONLINE_AGENT_SYSTEM", default=DEFAULT_SYSTEM)
+
+    def health(self) -> dict:
+        configured = bool(self.base_url and self.api_key)
+        return {
+            "ok": configured,
+            "node": self.node,
+            "provider": self.name,
+            "model": self.model,
+            "base_url_set": bool(self.base_url),
+            "api_key_set": bool(self.api_key),
+            "backend": "forge-chat-completions",
+        }
+
+    def _chat_url(self) -> str:
+        base = self.base_url
+        if base.endswith("/chat/completions"):
+            return base
+        if base.endswith("/v1"):
+            return f"{base}/chat/completions"
+        return f"{base}/v1/chat/completions"
+
+    def _request(self, payload: dict[str, Any], timeout_s: int) -> tuple[int | None, str, Exception | None]:
+        body = json.dumps(payload).encode("utf-8")
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+        req = urllib.request.Request(
+            self._chat_url(),
+            data=body,
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_s) as response:
+                raw = response.read().decode("utf-8", "replace")
+                return response.status, raw, None
+        except urllib.error.HTTPError as exc:
+            raw = exc.read().decode("utf-8", "replace")[:2000]
+            return exc.code, raw, None
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            return None, "", exc
+
+    def ask(self, prompt: str, *, timeout_s: int = 120) -> BrowserReply:
+        started = time.time()
+        if not (prompt or "").strip():
+            return error_reply(self.node, self.name, EMPTY_PROMPT)
+
+        if not self.base_url or not self.api_key:
+            return BrowserReply(
+                self.node,
+                self.name,
+                (
+                    f"[{ONLINE_CONFIG}] Set ONLINE_AGENT_BASE_URL and ONLINE_AGENT_API_KEY "
+                    f"(model={self.model}). Keys stay on Termux only."
+                ),
+                "",
+                int((time.time() - started) * 1000),
+                ONLINE_CONFIG,
+            )
+
+        timeout = max(5, min(int(timeout_s), 600))
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": self.system},
+                {"role": "user", "content": prompt.strip()},
+            ],
+            "temperature": 0.3,
+        }
+
+        status, raw, exc = self._request(payload, timeout)
+        elapsed = int((time.time() - started) * 1000)
+
+        if exc is not None:
+            reason = str(getattr(exc, "reason", exc))
+            code = RESPONSE_TIMEOUT if "timed out" in reason.lower() else UPSTREAM_ERROR
+            return BrowserReply(
+                self.node,
+                self.name,
+                f"[{code}] {reason}",
+                self._chat_url(),
+                elapsed,
+                code,
+            )
+
+        if status in (401, 403):
+            return BrowserReply(
+                self.node,
+                self.name,
+                f"[{ONLINE_AUTH_FAILED}] status={status}",
+                self._chat_url(),
+                elapsed,
+                ONLINE_AUTH_FAILED,
+            )
+        if status == 429:
+            return BrowserReply(
+                self.node,
+                self.name,
+                f"[{ONLINE_RATE_LIMITED}] {raw[:400]}",
+                self._chat_url(),
+                elapsed,
+                ONLINE_RATE_LIMITED,
+            )
+        if status is None or status >= 400:
+            return BrowserReply(
+                self.node,
+                self.name,
+                f"[{ONLINE_REJECTED}] status={status} {raw[:500]}",
+                self._chat_url(),
+                elapsed,
+                ONLINE_REJECTED,
+            )
+
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return BrowserReply(
+                self.node,
+                self.name,
+                f"[{ONLINE_BAD_RESPONSE}] non-JSON body",
+                self._chat_url(),
+                elapsed,
+                ONLINE_BAD_RESPONSE,
+            )
+
+        text = ""
+        choices = data.get("choices") or []
+        if choices:
+            message = choices[0].get("message") or {}
+            text = (message.get("content") or "").strip()
+        if not text:
+            text = (data.get("output_text") or data.get("content") or "").strip()
+        if not text:
+            return BrowserReply(
+                self.node,
+                self.name,
+                f"[{ONLINE_BAD_RESPONSE}] empty completion; keys={sorted(data.keys())}",
+                self._chat_url(),
+                elapsed,
+                ONLINE_BAD_RESPONSE,
+            )
+
+        return BrowserReply(self.node, self.name, text, self._chat_url(), elapsed)
+
+
+__all__ = ["OnlineAgentAdapter", "DEFAULT_MODEL"]
