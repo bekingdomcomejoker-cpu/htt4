@@ -4,6 +4,7 @@ import { ChatMessageContent } from "@/components/ChatMessageContent";
 import PipelineView from "@/components/PipelineView";
 import { ModelChatView } from "@/components/ModelChatView";
 import { formatLornaAgentProbe, formatOnlineAgentPrompt } from "@shared/onlineAgent";
+import { parseOperatorSession, serializeOperatorSession } from "@shared/operatorSession";
 import {
 	  Activity,
 	  BatteryCharging,
@@ -120,8 +121,8 @@ function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "ne
 function IconButton({ children, onClick, label }: { children: ReactNode; onClick?: () => void; label: string }) { return <button type="button" className="icon-button" onClick={onClick} aria-label={label}>{children}</button>; }
 
 function Unlock({ onUnlock }: { onUnlock: (client: McpClient, tools: Tool[], health: Health) => void }) {
-  const [url, setUrl] = useState(DEFAULT_URL);
-  const [key, setKey] = useState("");
+  const [url, setUrl] = useState(() => parseOperatorSession(window.sessionStorage.getItem("omega-operator-session"))?.url || DEFAULT_URL);
+  const [key, setKey] = useState(() => parseOperatorSession(window.sessionStorage.getItem("omega-operator-session"))?.key || "");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [live, setLive] = useState<boolean | null>(null);
@@ -132,7 +133,11 @@ function Unlock({ onUnlock }: { onUnlock: (client: McpClient, tools: Tool[], hea
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setMessage("");
     const client: McpClient = { url, key: key.trim(), session: null };
-    try { const [result, status] = await Promise.all([listTools(client), health(url)]); onUnlock(client, result, status); }
+    try {
+      const [result, status] = await Promise.all([listTools(client), health(url)]);
+      window.sessionStorage.setItem("omega-operator-session", serializeOperatorSession({ url, key: key.trim() }));
+      onUnlock(client, result, status);
+    }
     catch (error) { setMessage(error instanceof Error ? error.message : "Unable to unlock the bridge."); }
     finally { setBusy(false); }
   }
@@ -525,6 +530,18 @@ export default function Home() {
   const [client, setClient] = useState<McpClient | null>(null);
   const [tools, setTools] = useState<Tool[]>([]);
   const [status, setStatus] = useState<Health>({ ok: false });
+  const [restoring, setRestoring] = useState(true);
   const boot = (nextClient: McpClient, nextTools: Tool[], nextHealth: Health) => { setClient(nextClient); setTools(nextTools); setStatus(nextHealth); };
-  return client ? <AppShell client={client} initialTools={tools} initialHealth={status} onLock={() => setClient(null)} /> : <Unlock onUnlock={boot} />;
+  useEffect(() => {
+    const stored = parseOperatorSession(window.sessionStorage.getItem("omega-operator-session"));
+    if (!stored) { setRestoring(false); return; }
+    const restoredClient: McpClient = { ...stored, session: null };
+    Promise.all([listTools(restoredClient), health(restoredClient.url)])
+      .then(([nextTools, nextHealth]) => boot(restoredClient, nextTools, nextHealth))
+      .catch(() => window.sessionStorage.removeItem("omega-operator-session"))
+      .finally(() => setRestoring(false));
+  }, []);
+  if (client) return <AppShell client={client} initialTools={tools} initialHealth={status} onLock={() => { window.sessionStorage.removeItem("omega-operator-session"); setClient(null); }} />;
+  if (restoring) return <div className="unlock-page"><div className="unlock-card"><div className="eyebrow"><span className="eyebrow-line" />SECURE BRIDGE ACCESS</div><h1>Restoring the<br /><em>mesh.</em></h1><p className="unlock-copy">Validating your saved operator session without exposing the hub key to the server.</p></div></div>;
+  return <Unlock onUnlock={boot} />;
 }
