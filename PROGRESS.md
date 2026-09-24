@@ -194,3 +194,85 @@ The latest pushed commit is `3fb9ed73e2c189862c1f16b262293d4df231f2b7953b`. The 
 ## Server-side credential backup — 2026-09-24 UTC
 
 At the operator’s explicit request, the three available Node 4 server-side runtime values—`BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`, and `JWT_SECRET`—were copied to Termux at `~/.omega-node4-server.env` with mode `600`. Verification checked only the variable names and value lengths; no secret values were printed, committed, or added to this document. The continuation handoff records the secure file location and sourcing command.
+
+## Exact instructions for the next conversation — 2026-09-24 UTC
+
+### 1. Continue the existing website
+
+Do not initialize a new website, create a new WebDev project, or create a new repository. Continue with the existing project at `/home/ubuntu/omega-node4`, the existing private repository `bekingdomcomejoker-cpu/htt4`, and the existing deployment at `https://omeganode-djexaqht.manus.space`. Read `CONTINUATION_HANDOFF.md` before making changes.
+
+The next session should begin with this instruction: “Continue OMEGA Operator Node 4 from `/home/ubuntu/omega-node4`. Do not create a new website. Read `PROGRESS.md` and `CONTINUATION_HANDOFF.md`, inspect the current Git status, and continue from the latest pushed commit.”
+
+### 2. Check the source state
+
+Run:
+
+```bash
+cd /home/ubuntu/omega-node4
+git status --short --branch
+git log --oneline -5
+git remote -v
+```
+
+The expected branch is `main`, the remote is the private `htt4` repository, and the tree should be clean. The latest documentation commit is `7e884d6cd7ce5b862fed93ae471ade4983e625ce`.
+
+### 3. Load server-side credentials only when needed
+
+The confirmed server-side values are stored on Termux, not in GitHub or this file. On the phone, load them with:
+
+```bash
+set -a
+. "$HOME/.omega-node4-server.env"
+set +a
+test -n "$BUILT_IN_FORGE_API_URL"
+test -n "$BUILT_IN_FORGE_API_KEY"
+test -n "$JWT_SECRET"
+```
+
+The file must remain mode `600`. Do not print the values, paste them into chat, add them to source control, or place them in the website frontend.
+
+### 4. Check the Termux services
+
+Run on Termux:
+
+```bash
+sv status omega-mcp
+test -s "$HOME/.config/omega/mcp.token"
+test -s "$HOME/.online_agent_env"
+python3 -m py_compile "$HOME/omega_mcp_bridge.py"
+python3 -m py_compile "$HOME/omega-termux-lorna/lorna3/adapters/online_agent.py"
+```
+
+The existing phone integrations are `/node onlineagent` for LORNA 2 and `@onlineagent` or `@oa` for LORNA 3. The local `/node agent` route must not be changed while working on the Online Agent. If `/node agent` reports that Ollama is unavailable, diagnose Ollama separately.
+
+### 5. Run the known-good Online Agent tests
+
+Use LORNA 2 to verify MCP, memory, and follow-up context:
+
+```text
+/node onlineagent
+Remember exactly this preference: when I say turn it off after turning on the flashlight, turn the flashlight off.
+What do you remember about turning it off after the flashlight is on?
+turn rhe flashloght on
+off
+```
+
+Expected results are a successful memory save, a successful memory recall, `Flashlight turned on.`, and `Flashlight turned off.`. Confirm the durable fact without printing secrets:
+
+```bash
+grep -n flashlight "$HOME/.lorna_v2/facts.json"
+```
+
+### 6. Validate and publish changes
+
+For source changes, run:
+
+```bash
+cd /home/ubuntu/omega-node4
+pnpm check
+pnpm test
+pnpm build
+git diff --check
+```
+
+Remove generated `integrations/lorna3-onlineagent/__pycache__/` files before committing. Commit the intended source and documentation changes, push `main` to the existing `github` remote, confirm `git status --short --branch` is clean, and record the new commit here. Use the existing WebDev checkpoint workflow when handing code to the website preview; do not create another project.
