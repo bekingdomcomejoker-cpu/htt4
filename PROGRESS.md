@@ -276,3 +276,13 @@ git diff --check
 ```
 
 Remove generated `integrations/lorna3-onlineagent/__pycache__/` files before committing. Commit the intended source and documentation changes, push `main` to the existing `github` remote, confirm `git status --short --branch` is clean, and record the new commit here. Use the existing WebDev checkpoint workflow when handing code to the website preview; do not create another project.
+
+## Continuation validation and Online Agent regression hardening — 2026-09-24 UTC
+
+The existing private `htt4` repository was restored into a fresh continuation sandbox at the prescribed `/home/ubuntu/omega-node4` location without creating a new website or repository. The deployed Node 4 gateway at `https://omeganode-djexaqht.manus.space` returned the expected secure OMEGA Operator bridge landing page.
+
+The source validation initially identified a reproducibility problem: the assistant unit tests relied on deployment-only Forge environment variables, which are intentionally not present in a clean source checkout. The tests now mock only the Forge transport configuration with non-secret fixture values. This keeps the production guard intact while allowing the suite to validate request, MCP, approval, and upstream-error behavior offline.
+
+The phone-side adapter now normalizes the observed `flashloght` typo in its retained conversation history as well as in the current message. Consequently, `turn it off` resolves correctly after a typo-based flashlight-on request. New offline Python regression coverage verifies that a memory request calls `lorna_remember` and that the typo-on / follow-up-off flow invokes `flashlight_control` with `on` and then `off`. The tests use in-process LORNA and MCP stand-ins; no phone connection, token, or Forge credential is required.
+
+Validation passed: `pnpm check`, `pnpm test` (**15 Vitest tests**), `python3 -m unittest integrations/lorna3-onlineagent/test_online_agent.py` (**2 tests**), `pnpm build`, Python syntax checks, and `git diff --check`. The build retains only the pre-existing Vite analytics-placeholder and large-chunk warnings. The verified source repair is commit `023f1239056abb9642ceb76edc56f1d03b502889` (`Harden Online Agent regression coverage`).
