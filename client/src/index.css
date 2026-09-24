@@ -649,6 +649,19 @@
   padding: 0.65rem 0.35rem;
 }
 
+.mc-memory-box { margin-top: 0.7rem; padding-top: 0.65rem; border-top: 1px solid color-mix(in oklab, var(--border, #333) 45%, transparent); }
+.mc-memory-title { display: flex; align-items: center; gap: 0.35rem; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em; opacity: 0.65; margin-bottom: 0.45rem; }
+.mc-memory-form { display: flex; gap: 0.35rem; }
+.mc-memory-form input { min-width: 0; flex: 1; border: 1px solid color-mix(in oklab, var(--border, #333) 60%, transparent); border-radius: 0.45rem; background: color-mix(in oklab, var(--background, #000) 35%, transparent); color: inherit; padding: 0.42rem 0.5rem; font: inherit; font-size: 0.75rem; outline: none; }
+.mc-memory-form button, .mc-memory-item button { display: grid; place-items: center; border: 1px solid color-mix(in oklab, var(--border, #333) 65%, transparent); border-radius: 0.4rem; background: transparent; color: inherit; cursor: pointer; }
+.mc-memory-form button { width: 1.8rem; }
+.mc-memory-form button:disabled, .mc-memory-item button:disabled { opacity: 0.45; cursor: not-allowed; }
+.mc-memory-empty { padding-top: 0.45rem; font-size: 0.7rem; opacity: 0.5; }
+.mc-memory-list { display: grid; gap: 0.3rem; margin-top: 0.45rem; }
+.mc-memory-item { display: flex; align-items: flex-start; gap: 0.35rem; font-size: 0.7rem; line-height: 1.3; opacity: 0.78; }
+.mc-memory-item span { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.mc-memory-item button { width: 1.35rem; height: 1.35rem; flex-shrink: 0; opacity: 0.7; }
+
 .mc-contacts-head {
   padding: 0.85rem 0.9rem 0.65rem;
   border-bottom: 1px solid color-mix(in oklab, var(--border, #333) 55%, transparent);

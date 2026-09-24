@@ -115,3 +115,26 @@ export ONLINE_AGENT_MODEL=gpt-5.5          # or another Forge id
 | `lorna3/adapters/online_agent.py` | Adapter |
 | `patches/dispatch_ROUTES_snippet.py` | Copy-paste routes |
 | `INSTALL.md` | This guide |
+
+## Local MCP tool loop (LORNA 2 and LORNA 3)
+
+The online-agent package includes `mcp_client.py` and a bounded tool loop in `online_agent.py`. On Termux, install both files into the LORNA 3 package so the Forge adapter can initialize the authenticated local bridge, list the local tool catalog, execute at most four tool rounds, and return the final Forge response. The adapter falls back to ordinary Forge chat if the local bridge is temporarily unavailable; it never exposes the MCP key to Forge or the website.
+
+The LORNA 2 `/node onlineagent` route forwards through the existing `lorna3_route` bridge handler, so no LORNA 2 source change is required. This preserves the existing `/node agent` implementation and its MCP behavior unchanged.
+
+Required phone-local configuration remains:
+
+```bash
+set -a; . "$HOME/.online_agent_env"; set +a
+export LORNA_MCP_API_KEY="$(cat "$HOME/.config/omega/mcp.token")"
+cp "$HOME/.config/omega/mcp.token" "$HOME/.omega_mcp_token"
+```
+
+The read-only verification commands are:
+
+```bash
+printf '/node onlineagent\nYou MUST call the read-only MCP tool battery_status now with an empty JSON object. After it returns, report the exact result.\n/quit\n' | lorna2
+printf '@oa You MUST call the read-only MCP tool battery_status now with an empty JSON object. After it returns, report the exact result.\n/quit\n' | lorna3
+```
+
+Both routes must return a live JSON battery record from the connected phone. Do not commit `.online_agent_env`, MCP token files, or Forge credentials.

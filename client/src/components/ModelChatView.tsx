@@ -29,6 +29,7 @@ import {
   Search,
   Send,
   Sparkles,
+  Trash2,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -55,6 +56,12 @@ type ChatMessage = {
   role: string;
   content: string;
   model?: string | null;
+  createdAt?: string | Date | null;
+};
+
+type ChatMemory = {
+  id: number;
+  content: string;
   createdAt?: string | Date | null;
 };
 
@@ -157,6 +164,7 @@ export function ModelChatView({
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
+  const [memoryDraft, setMemoryDraft] = useState("");
   const [pendingCommand, setPendingCommand] = useState<{
     name: string;
     arguments: Record<string, unknown>;
@@ -191,10 +199,12 @@ export function ModelChatView({
     { clientId, conversationId: conversationId || 0 },
     { enabled: conversationId !== null },
   );
+  const memoriesQuery = trpc.chat.memories.useQuery({ clientId });
 
   const models: ModelOption[] = modelsQuery.data ? Array.from(modelsQuery.data as readonly ModelOption[]) : [];
   const conversations: Conversation[] = (conversationsQuery.data as Conversation[]) || [];
   const messages: ChatMessage[] = (messagesQuery.data as ChatMessage[]) || [];
+  const memories: ChatMemory[] = (memoriesQuery.data as ChatMemory[]) || [];
 
   const createConversation = trpc.chat.create.useMutation({
     onSuccess: async (conversation) => {
@@ -235,6 +245,23 @@ export function ModelChatView({
       if (conversationId !== null) {
         await utils.chat.messages.invalidate({ clientId, conversationId });
       }
+    },
+    onError: (error) => notify(error.message),
+  });
+
+  const saveMemory = trpc.chat.saveMemory.useMutation({
+    onSuccess: async () => {
+      setMemoryDraft("");
+      await utils.chat.memories.invalidate({ clientId });
+      notify("Memory saved for future chats");
+    },
+    onError: (error) => notify(error.message),
+  });
+
+  const deleteMemory = trpc.chat.deleteMemory.useMutation({
+    onSuccess: async () => {
+      await utils.chat.memories.invalidate({ clientId });
+      notify("Memory removed");
     },
     onError: (error) => notify(error.message),
   });
@@ -424,6 +451,13 @@ export function ModelChatView({
     });
   }
 
+  function submitMemory(event: React.FormEvent) {
+    event.preventDefault();
+    const content = memoryDraft.trim();
+    if (!content || saveMemory.isPending) return;
+    saveMemory.mutate({ clientId, content });
+  }
+
   function approveCommand() {
     if (!pendingCommand || !conversationId || !selectedModelId) return;
     executeCommand.mutate({
@@ -520,6 +554,14 @@ export function ModelChatView({
                 placeholder="Search models"
                 spellCheck={false}
               />
+            </div>
+            <div className="mc-memory-box">
+              <div className="mc-memory-title"><Sparkles size={13} /> PERSISTENT MEMORY</div>
+              <form onSubmit={submitMemory} className="mc-memory-form">
+                <input value={memoryDraft} onChange={(event) => setMemoryDraft(event.target.value)} placeholder="Save a preference or fact…" maxLength={2000} />
+                <button type="submit" disabled={!memoryDraft.trim() || saveMemory.isPending} aria-label="Save memory">{saveMemory.isPending ? <Loader2 size={13} className="spin" /> : <Plus size={13} />}</button>
+              </form>
+              {memoriesQuery.isLoading ? <div className="mc-memory-empty">Loading memory…</div> : memories.length === 0 ? <div className="mc-memory-empty">Nothing saved yet.</div> : <div className="mc-memory-list">{memories.slice(0, 5).map((memory) => <div key={memory.id} className="mc-memory-item"><span>{memory.content}</span><button type="button" onClick={() => deleteMemory.mutate({ clientId, memoryId: memory.id })} disabled={deleteMemory.isPending} aria-label="Delete memory"><Trash2 size={12} /></button></div>)}</div>}
             </div>
           </div>
           <div className="mc-contact-list">

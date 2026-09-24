@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { chatMessages, conversations, InsertUser, users } from "../drizzle/schema";
+import { chatMemories, chatMessages, conversations, InsertUser, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -105,4 +105,26 @@ export async function addChatMessage(message: { conversationId: number; role: "u
   const db = await getDb();
   if (!db) throw new Error("Database is not available on this deployment.");
   await db.insert(chatMessages).values(message);
+}
+
+export async function listChatMemories(clientId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(chatMemories).where(eq(chatMemories.clientId, clientId)).orderBy(desc(chatMemories.updatedAt)).limit(50);
+}
+
+export async function createChatMemory(clientId: string, content: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available on this deployment.");
+  const result = await db.insert(chatMemories).values({ clientId, content: content.trim().slice(0, 2000) });
+  const id = Number(result[0].insertId);
+  const memories = await db.select().from(chatMemories).where(and(eq(chatMemories.id, id), eq(chatMemories.clientId, clientId))).limit(1);
+  if (!memories[0]) throw new Error("Failed to save memory.");
+  return memories[0];
+}
+
+export async function deleteChatMemory(clientId: string, memoryId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available on this deployment.");
+  await db.delete(chatMemories).where(and(eq(chatMemories.id, memoryId), eq(chatMemories.clientId, clientId)));
 }

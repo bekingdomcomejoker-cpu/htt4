@@ -27,7 +27,7 @@ type IncomingMessage = { role?: unknown; content?: unknown };
 type ForgeMessage = Record<string, unknown>;
 type ForgeResponse = InvokeResult & { choices: Array<{ message: { role: string; content?: unknown; tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }> }; finish_reason: string | null }> };
 
-type AssistantBody = { model?: unknown; messages?: unknown; prompt?: unknown; bridge?: McpBridgeConfig };
+type AssistantBody = { model?: unknown; messages?: unknown; prompt?: unknown; memoryContext?: unknown; bridge?: McpBridgeConfig };
 
 export function isChatModel(value: unknown): value is ChatModel { return MODEL_OPTIONS.some((option) => option.id === value); }
 
@@ -91,7 +91,9 @@ export async function completeOmegaAssistant(body: unknown) {
     mcpSession = discovered.session;
   }
 
-  const transcript: ForgeMessage[] = [{ role: "system", content: SYSTEM_PROMPT }, ...messages.map(message => ({ role: message.role, content: message.content as string }))];
+  const memoryContext = typeof payload.memoryContext === "string" ? payload.memoryContext.trim().slice(0, 12000) : "";
+  const systemContent = memoryContext ? `${SYSTEM_PROMPT}\n\nPersistent operator memory (use only when relevant; do not invent or overwrite it):\n${memoryContext}` : SYSTEM_PROMPT;
+  const transcript: ForgeMessage[] = [{ role: "system", content: systemContent }, ...messages.map(message => ({ role: message.role, content: message.content as string }))];
   let toolCalls = 0;
   for (let round = 0; round <= MAX_MCP_ROUNDS; round += 1) {
     const result = await forgeCompletion(model, transcript, mcpTools);

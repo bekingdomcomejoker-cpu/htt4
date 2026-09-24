@@ -15,6 +15,13 @@
       "when": 1790173247486,
       "tag": "0001_slim_obadiah_stane",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1790211570223,
+      "tag": "0002_blushing_ben_grimm",
+      "breakpoints": true
     }
   ]
 }

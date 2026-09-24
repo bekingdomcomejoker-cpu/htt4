@@ -26,6 +26,14 @@ describe("OMEGA assistant", () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/v1/chat/completions"), expect.objectContaining({ method: "POST", headers: expect.objectContaining({ "Content-Type": "application/json" }) }));
   });
 
+  it("injects bounded persistent memory into the system context", async () => {
+    await completeOmegaAssistant({ prompt: "Use my preference", memoryContext: "- Prefers concise deployment notes" });
+    const request = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(request.body));
+    expect(body.messages[0].content).toContain("Persistent operator memory");
+    expect(body.messages[0].content).toContain("Prefers concise deployment notes");
+  });
+
   it("accepts the expanded prompt ceiling", () => {
     expect(MAX_PROMPT_CHARS).toBe(120000);
     expect(normalizeAssistantMessages({ prompt: "x".repeat(120000) })[0]?.content).toHaveLength(120000);

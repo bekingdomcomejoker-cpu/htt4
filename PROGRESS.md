@@ -160,3 +160,19 @@ The reproducible phone-side instructions are documented in `integrations/lorna3-
 ## LORNA 3 launcher credential loading — 2026-09-24 UTC
 
 Resolved the remaining standalone `lorna3` HTTP 403: the launcher was not sourcing the phone-local `~/.online_agent_env`, although manually sourced diagnostic sessions succeeded. The launcher now loads that file before starting the TUI. A real `~/bin/lorna3` session was verified with `@oa Reply with exactly: l3-launcher-env-ok`, returning the expected response. Credentials remain phone-local and are not committed.
+
+## Node 4 online-agent MCP tool loop — 2026-09-24 UTC
+
+Added the bounded Forge tool loop to the phone-side `online_agent.py` adapter and included the matching authenticated `mcp_client.py` in `integrations/lorna3-onlineagent/`. The adapter initializes the local streamable-HTTP MCP bridge, publishes its discovered schemas as OpenAI-compatible function tools, executes at most four rounds, prevents repeated calls, and falls back to plain Forge chat when the bridge is unavailable. `/node agent` was not modified.
+
+Because the existing LORNA 2 `/node onlineagent` route forwards to the LORNA 3 `lorna3_route` bridge handler, the same adapter now serves both LORNA 2 and LORNA 3 without duplicating or replacing the local agent implementation. The phone’s local MCP catalog was independently confirmed to expose `battery_status` and `connector_health`.
+
+End-to-end read-only verification passed on the connected phone for both routes. LORNA 3 `@oa` invoked `battery_status` and returned a live JSON record showing 29% and charging; a subsequent LORNA 2 `/node onlineagent` test invoked the same tool and returned a live record showing 30% and charging. The route aliases, launcher credential loading, and MCP authentication all passed. No credential material was committed.
+
+The Node 4 adapter package now documents the two-file installation, phone-local token loading, bounded loop behavior, and exact LORNA 2/LORNA 3 verification commands in `integrations/lorna3-onlineagent/INSTALL.md`.
+
+## Persistent chat memory — 2026-09-24 UTC
+
+Added durable, browser-scoped operator memory to Model Chat. The new `chatMemories` table stores up to 2,000 characters per memory against the existing browser client ID; the UI can save, list, and delete entries from the Model Chat sidebar. Before each assistant request, the server loads the client’s saved memories and injects a bounded, clearly labeled memory context into the server-side system prompt. Existing conversation history and MCP approval behavior remain unchanged.
+
+The migration was applied non-destructively to the Node 4 database with `CREATE TABLE IF NOT EXISTS`. TypeScript validation passed, all **14 Vitest tests passed**, the production build passed, and the Python online-agent adapter checks passed. No memory contents or credentials were added to source control.

@@ -3,7 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { addChatMessage, createConversation, getConversation, listChatMessages, listConversations, updateConversationModel } from "./db";
+import { addChatMessage, createChatMemory, createConversation, deleteChatMemory, getConversation, listChatMemories, listChatMessages, listConversations, updateConversationModel } from "./db";
 import { completeOmegaAssistant, MODEL_OPTIONS, type ChatModel } from "./assistant";
 import { callAssistantTool, discoverAssistantTools, isCommandTool, type McpBridgeConfig } from "./mcp";
 import { pipelineRouter } from "./pipelineRouter";
@@ -27,6 +27,12 @@ export const appRouter = router({
     models: publicProcedure.query(() => MODEL_OPTIONS),
     conversations: publicProcedure.input(z.object({ clientId: clientIdSchema })).query(({ input }) => listConversations(input.clientId)),
     messages: publicProcedure.input(z.object({ clientId: clientIdSchema, conversationId: z.number().int().positive() })).query(({ input }) => listChatMessages(input.clientId, input.conversationId)),
+    memories: publicProcedure.input(z.object({ clientId: clientIdSchema })).query(({ input }) => listChatMemories(input.clientId)),
+    saveMemory: publicProcedure.input(z.object({ clientId: clientIdSchema, content: z.string().trim().min(1).max(2000) })).mutation(({ input }) => createChatMemory(input.clientId, input.content)),
+    deleteMemory: publicProcedure.input(z.object({ clientId: clientIdSchema, memoryId: z.number().int().positive() })).mutation(async ({ input }) => {
+      await deleteChatMemory(input.clientId, input.memoryId);
+      return { success: true } as const;
+    }),
     create: publicProcedure.input(z.object({ clientId: clientIdSchema, title: z.string().max(180).optional(), model: modelSchema })).mutation(({ input }) => createConversation(input.clientId, input.title || "New OMEGA chat", input.model)),
     setModel: publicProcedure.input(z.object({ clientId: clientIdSchema, conversationId: z.number().int().positive(), model: modelSchema })).mutation(async ({ input }) => {
       const conversation = await getConversation(input.clientId, input.conversationId);
@@ -38,10 +44,11 @@ export const appRouter = router({
       const conversation = await getConversation(input.clientId, input.conversationId);
       if (!conversation) throw new Error("Conversation not found.");
       const history = await listChatMessages(input.clientId, input.conversationId);
+      const memories = await listChatMemories(input.clientId);
       const messages = [...history.map((message) => ({ role: message.role, content: message.content })), { role: "user" as const, content: input.prompt }];
       await addChatMessage({ conversationId: input.conversationId, role: "user", content: input.prompt, model: input.model });
       try {
-        const result = await completeOmegaAssistant({ model: input.model, messages, bridge: input.bridge as McpBridgeConfig | undefined });
+        const result = await completeOmegaAssistant({ model: input.model, messages, memoryContext: memories.map((memory) => `- ${memory.content}`).join("\n"), bridge: input.bridge as McpBridgeConfig | undefined });
         await addChatMessage({ conversationId: input.conversationId, role: "assistant", content: result.content, model: result.model });
         return result;
       } catch (error) {

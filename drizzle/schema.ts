@@ -30,7 +30,16 @@ export const chatMessages = mysqlTable("chatMessages", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+export const chatMemories = mysqlTable("chatMemories", {
+  id: int("id").autoincrement().primaryKey(),
+  clientId: varchar("clientId", { length: 128 }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Conversation = typeof conversations.$inferSelect;
 export type ChatMessage = typeof chatMessages.$inferSelect;
+export type ChatMemory = typeof chatMemories.$inferSelect;
