@@ -191,6 +191,6 @@ The complete continuation package is documented in `CONTINUATION_HANDOFF.md`. It
 
 The latest pushed commit is `3fb9ed73e2c189862c1f16b262293d4df231f2b7953b`. The repository is clean after the push. The latest validation passed TypeScript checks, all **15 Vitest tests**, production build checks, and Python adapter syntax checks. The connected phone passed the real LORNA 2 flashlight follow-up sequence and shared-memory save/recall test.
 
-## Online flashlight follow-up repair — 2026-09-24 UTC
+## Server-side credential backup — 2026-09-24 UTC
 
-The online-agent adapter now retains a bounded short-term conversation window, allowing `turn it off` to resolve the immediately preceding flashlight-on request. It also normalizes common misspellings such as `flashloght` and routes flashlight commands directly to a new bounded `flashlight_control` MCP bridge tool backed by `termux-torch`, avoiding the slow LORNA3 language-model route for this deterministic device action. A real LORNA 2 sequence returned four successful results for typo-on, `off`, typo-on, and `turn it off`. The separate `/node agent` Ollama error is an independent local-backend availability issue and was not modified.
+At the operator’s explicit request, the three available Node 4 server-side runtime values—`BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`, and `JWT_SECRET`—were copied to Termux at `~/.omega-node4-server.env` with mode `600`. Verification checked only the variable names and value lengths; no secret values were printed, committed, or added to this document. The continuation handoff records the secure file location and sourcing command.

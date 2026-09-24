@@ -25,6 +25,14 @@ Operator sessions are persisted securely in the browser session flow. The websit
 
 Persistent chat memory is separate from the phone’s LORNA memory. Website memories are stored by browser client ID, can be saved/listed/deleted in Model Chat, and are injected into the server-side assistant prompt with a bounded context. Phone memory uses LORNA’s existing `~/.lorna_v2/facts.json` backend.
 
+The confirmed Node 4 server-side runtime values are also backed up locally on Termux at `~/.omega-node4-server.env` with file mode `600`. The file contains `BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`, and `JWT_SECRET`. It is not committed, printed, or included in this handoff. Load it only when a future Termux maintenance task explicitly needs the server-side values:
+
+```bash
+set -a
+. "$HOME/.omega-node4-server.env"
+set +a
+```
+
 ## Termux integration status
 
 The Termux bridge is supervised by `omega-mcp` and exposes an authenticated streamable HTTP MCP catalog. The Online Agent adapter initializes that catalog, publishes its schemas to Forge, runs a bounded tool loop, prevents repeated tool calls, and falls back to ordinary Forge chat if the bridge is unavailable.
