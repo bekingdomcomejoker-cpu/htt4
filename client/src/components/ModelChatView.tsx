@@ -158,9 +158,15 @@ type UsageTotals = { promptTokens: number; completionTokens: number; totalTokens
 export function ModelChatView({
   client,
   notify,
+  allowedModelIds,
+  heading = "Your models, as contacts.",
+  description = "WhatsApp-style threads per model. Optional mic input and spoken replies — browser-native, no extra keys.",
 }: {
   client: McpClient;
   notify: (text: string) => void;
+  allowedModelIds?: string[];
+  heading?: string;
+  description?: string;
 }) {
   const [clientId] = useState(getBrowserClientId);
   const [query, setQuery] = useState("");
@@ -215,7 +221,7 @@ export function ModelChatView({
   );
   const memoriesQuery = trpc.chat.memories.useQuery({ clientId });
 
-  const models: ModelOption[] = modelsQuery.data ? Array.from(modelsQuery.data as readonly ModelOption[]) : [];
+  const models: ModelOption[] = modelsQuery.data ? Array.from(modelsQuery.data as readonly ModelOption[]).filter((model) => !allowedModelIds || allowedModelIds.includes(model.id)) : [];
   const conversations: Conversation[] = (conversationsQuery.data as Conversation[]) || [];
   const messages: ChatMessage[] = (messagesQuery.data as ChatMessage[]) || [];
   const memories: ChatMemory[] = (memoriesQuery.data as ChatMemory[]) || [];
@@ -324,6 +330,10 @@ export function ModelChatView({
     askConversation.isPending ||
     executeCommand.isPending ||
     createConversation.isPending;
+
+  useEffect(() => {
+    if (allowedModelIds?.length && models.length && !selectedModelId) void openContact(models[0].id);
+  }, [allowedModelIds, models, selectedModelId]);
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -522,8 +532,8 @@ export function ModelChatView({
     <div className="view model-chat-view">
       <SectionHead
         eyebrow="Model chat / voice"
-        title="Your models, as contacts."
-        copy="WhatsApp-style threads per model. Optional mic input and spoken replies — browser-native, no extra keys."
+        title={heading}
+        copy={description}
         action={
           <div className="mc-head-actions">
             {voiceSupport.synthesis && (

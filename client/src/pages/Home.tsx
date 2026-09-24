@@ -14,8 +14,9 @@ import {
 	  ChevronRight,
 	  CircleDot,
   Clipboard,
-  Cloud,
-  Command,
+	  Cloud,
+	  Command,
+	  Cpu,
   FileCode2,
   FolderOpen,
   GitBranch,
@@ -166,6 +167,7 @@ const nav = [
   { id: "overview", label: "Overview", icon: Activity },
   { id: "terminal", label: "Terminal", icon: TerminalSquare },
   { id: "gateway", label: "Cloud CLI", icon: Command },
+  { id: "localcli", label: "Cloud Local CLI", icon: Cpu },
   { id: "pipeline", label: "HTT3 Pipeline", icon: GitBranch },
   { id: "modelchat", label: "Model Chat", icon: MessageCircle },
   { id: "mesh", label: "Node Mesh", icon: Network },
@@ -236,7 +238,7 @@ function AppShell({ client, initialTools, initialHealth, onLock }: { client: Mcp
     {mobileNav && <div className="mobile-overlay" onClick={() => setMobileNav(false)} />}
     <main className="operator-main">
       <header className="operator-header"><button className="mobile-menu" onClick={() => setMobileNav(true)}><Menu size={20} /></button><div className="header-title"><span>OMEGA /</span><strong>{nav.find((item) => item.id === active)?.label}</strong></div><div className="header-actions"><span className="realtime-status"><StatusDot live={realtime} />{realtime ? "LIVE SYNC" : "POLLING"}</span><span className="header-clock">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><IconButton label="Refresh mesh" onClick={() => void refresh()}>{refreshing ? <Loader2 size={17} className="spin" /> : <RefreshCw size={17} />}</IconButton><div className="avatar">OP</div></div></header>
-      <div className="operator-content">{active === "overview" && <Overview status={status} snap={snap} tools={tools} battery={battery} onNavigate={setActive} />} {active === "terminal" && <TerminalView client={client} tools={tools} notify={notify} />} {active === "gateway" && <GatewayView client={client} notify={notify} />} {active === "pipeline" && <PipelineView client={client} notify={notify} />} {active === "modelchat" && <ModelChatView client={client} notify={notify} />} {active === "mesh" && <NodeMeshView client={client} snap={snap} notify={notify} />} {active === "files" && <FilesView client={client} notify={notify} />} {active === "network" && <NetworkView client={client} battery={battery} notify={notify} />} {active === "router" && <MikrotikView client={client} notify={notify} />} {active === "tools" && <ToolsView client={client} tools={tools} notify={notify} />} {active === "inbox" && <InboxView client={client} snap={snap} notify={notify} />}</div>
+      <div className="operator-content">{active === "overview" && <Overview status={status} snap={snap} tools={tools} battery={battery} onNavigate={setActive} />} {active === "terminal" && <TerminalView client={client} tools={tools} notify={notify} />} {active === "gateway" && <GatewayView client={client} notify={notify} />} {active === "localcli" && <ModelChatView client={client} notify={notify} allowedModelIds={["local-qwen2.5-7b"]} heading="Cloud Local CLI." description="Private local inference through the Qwen2.5 7B model on the configured Ollama host." />} {active === "pipeline" && <PipelineView client={client} notify={notify} />} {active === "modelchat" && <ModelChatView client={client} notify={notify} />} {active === "mesh" && <NodeMeshView client={client} snap={snap} notify={notify} />} {active === "files" && <FilesView client={client} notify={notify} />} {active === "network" && <NetworkView client={client} battery={battery} notify={notify} />} {active === "router" && <MikrotikView client={client} notify={notify} />} {active === "tools" && <ToolsView client={client} tools={tools} notify={notify} />} {active === "inbox" && <InboxView client={client} snap={snap} notify={notify} />}</div>
     </main>
     <div className="toast-stack">{toasts.map((toast, index) => <div className="toast" key={`${toast}-${index}`}><StatusDot live={true} />{toast}</div>)}</div>
   </div>;

@@ -300,3 +300,9 @@ Added a persisted **Rotate models** switch. When enabled, each new prompt advanc
 Installed Ollama `0.34.3` in the current sandbox and pulled `qwen2.5:7b` (4.7 GB download; approximately 5.1 GB loaded in memory). The local API smoke test returned `LOCAL_7B_OK`. The model runs CPU-only in this environment; the verified response took approximately 17.5 seconds including model load.
 
 Added an optional `Local Qwen2.5 7B` model entry to the existing website source. When the website server runs on the same host as Ollama, selecting this model sends OpenAI-compatible requests to `LOCAL_LLM_API_URL` (default `http://127.0.0.1:11434`) using model `qwen2.5:7b`; `LOCAL_LLM_API_KEY` is optional. Forge remains the default provider for all existing models. The local provider is not reachable from the existing public WebDev deployment unless the deployed server is colocated with Ollama or given a secure private network path.
+
+## Cloud Local CLI tab — 2026-09-24 UTC
+
+Added a dedicated **Cloud Local CLI** navigation tab to the existing OMEGA Operator interface. It reuses the authenticated Model Chat surface but filters the catalog to the local `Local Qwen2.5 7B` provider, automatically opens that local conversation, and labels the view as private Ollama-hosted inference. The regular **Model Chat** tab continues to show the complete Forge plus local model catalog, including Qwen in rotation mode.
+
+Validation passed after the UI change: TypeScript check, all **16 Vitest tests**, **2** Online Agent Python regressions, production build, and `git diff --check`.
