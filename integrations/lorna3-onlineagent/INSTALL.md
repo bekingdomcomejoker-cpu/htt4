@@ -150,3 +150,7 @@ sv restart omega-mcp
 printf '/node onlineagent\nRemember exactly this preference: when I say turn it off after turning on the flashlight, turn the flashlight off.\nWhat do you remember about turning it off after the flashlight is on?\n/quit\n' | lorna2
 grep -n flashlight "$HOME/.lorna_v2/facts.json"
 ```
+
+## Device follow-ups
+
+The adapter keeps the last few user and assistant turns in the running LORNA 2/3 process, so a follow-up such as `turn it off` can resolve the immediately preceding flashlight action. Flashlight requests, including common misspellings such as `flashloght`, use the bridge’s bounded `flashlight_control` tool directly instead of routing through a potentially slow language-model path. The bridge invokes `termux-torch` with an eight-second command limit and returns a clear success or failure message.

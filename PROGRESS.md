@@ -180,3 +180,7 @@ The migration was applied non-destructively to the Node 4 database with `CREATE 
 ## Termux shared-memory repair — 2026-09-24 UTC
 
 The Termux online-agent route is now linked to LORNA’s existing `~/.lorna_v2/facts.json` backend through three supervised MCP bridge tools: `lorna_remember`, `lorna_memory_context`, and `lorna_forget`. The online-agent system prompt requires those tools for explicit memory operations. After fixing one `_Path` import alias in the bridge helper and restarting `omega-mcp`, the real LORNA 2 flow saved and recalled the flashlight preference successfully; the fact is present in the canonical facts file. The local `/node agent` route remains untouched.
+
+## Online flashlight follow-up repair — 2026-09-24 UTC
+
+The online-agent adapter now retains a bounded short-term conversation window, allowing `turn it off` to resolve the immediately preceding flashlight-on request. It also normalizes common misspellings such as `flashloght` and routes flashlight commands directly to a new bounded `flashlight_control` MCP bridge tool backed by `termux-torch`, avoiding the slow LORNA3 language-model route for this deterministic device action. A real LORNA 2 sequence returned four successful results for typo-on, `off`, typo-on, and `turn it off`. The separate `/node agent` Ollama error is an independent local-backend availability issue and was not modified.

@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -83,6 +84,7 @@ class OnlineAgentAdapter:
             default="",
         )
         self.system = _env("ONLINE_AGENT_SYSTEM", default=DEFAULT_SYSTEM)
+        self.history: list[dict[str, str]] = []
 
     def health(self) -> dict:
         configured = bool(self.base_url and self.api_key)
@@ -138,6 +140,22 @@ class OnlineAgentAdapter:
                 f"[{ONLINE_CONFIG}] Set ONLINE_AGENT_BASE_URL and ONLINE_AGENT_API_KEY (model={self.model}). Keys stay on Termux only.",
                 "", int((time.time() - started) * 1000), ONLINE_CONFIG,
             )
+        original_prompt = prompt.strip()
+        normalized_prompt = original_prompt.casefold().replace("flashloght", "flashlight")
+        recent_user_text = " ".join(item["content"] for item in self.history[-6:] if item.get("role") == "user").casefold()
+        flashlight_follow_up = bool(re.search(r"\b(off|turn it off|switch it off)\b", normalized_prompt) and "flashlight" in recent_user_text and re.search(r"\b(on|turned on|turn it on)\b", recent_user_text))
+        flashlight_request = ("flashlight" in normalized_prompt or "torch" in normalized_prompt or flashlight_follow_up) and bool(re.search(r"\b(on|off|turn it on|turn it off|switch it on|switch it off)\b", normalized_prompt))
+        if flashlight_request:
+            state = "off" if re.search(r"\b(off|turn it off|switch it off)\b", normalized_prompt) else "on"
+            try:
+                from mcp_client import OmegaMCPClient
+                client = OmegaMCPClient()
+                client.initialize()
+                result = client.call("flashlight_control", {"state": state}, timeout=10)
+                self.history.extend([{"role": "user", "content": original_prompt}, {"role": "assistant", "content": result}])
+                return BrowserReply(self.node, self.name, result, "local-mcp://flashlight_control", int((time.time() - started) * 1000))
+            except Exception as exc:
+                return BrowserReply(self.node, self.name, f"Flashlight control failed: {exc}", "local-mcp://flashlight_control", int((time.time() - started) * 1000), ONLINE_REJECTED)
         try:
             from mcp_client import OmegaMCPClient
             client = OmegaMCPClient()
@@ -153,7 +171,8 @@ class OnlineAgentAdapter:
             return self._ask_plain(prompt, timeout_s=timeout_s)
         messages = [
             {"role": "system", "content": self.system + " You have access to the authenticated local OMEGA MCP tools. Use them when needed; prefer read-only checks and never claim a tool result you did not receive."},
-            {"role": "user", "content": prompt.strip()},
+            *self.history[-6:],
+            {"role": "user", "content": original_prompt},
         ]
         seen = set()
         for _ in range(4):
@@ -170,6 +189,7 @@ class OnlineAgentAdapter:
             content = (message.get("content") or "").strip()
             if not calls:
                 if content:
+                    self.history.extend([{"role": "user", "content": original_prompt}, {"role": "assistant", "content": content}])
                     return BrowserReply(self.node, self.name, content, self._chat_url(), int((time.time() - started) * 1000))
                 return self._ask_plain(prompt, timeout_s=timeout_s)
             messages.append({"role": "assistant", "content": message.get("content") or "", "tool_calls": calls})
