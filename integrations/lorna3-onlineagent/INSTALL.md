@@ -75,7 +75,9 @@ print(a.ask('Reply with exactly: onlineagent-ok').text)
 "
 ```
 
-5. From TUI / dispatcher:
+5. Add the TUI dropdown and route. In `integrations/lorna3_tui.py`, add `@onlineagent` and `@oa` to `AT_ROUTES`. The existing `LornaCompleter` uses that registry for the Tab-completion dropdown. In `run_router`, dispatch both aliases through `router.dispatch` with the `omega-termux-lorna/lorna3` root on `sys.path`; the complete verified snippet is recorded in [`LORNA3_TUI_ROUTE_PATCH.md`](./LORNA3_TUI_ROUTE_PATCH.md).
+
+6. From TUI / dispatcher:
 
 ```text
 @onlineagent Reply with exactly: onlineagent-ok

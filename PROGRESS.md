@@ -148,3 +148,11 @@ Validation completed in both the GitHub working tree and active WebDev project: 
 Integrated the supplied `lorna3-onlineagent.zip` package. The package SHA-256 matched `5e1db5624c8ef7a598116038b5a253001d12a538c3c17171d60248976353d564`. The website Cloud CLI now includes a LORNA ONLINE AGENT panel that queues `@onlineagent <prompt>` messages to the Termux inbox and provides an explicit `lorna2 --node agent --quiet -p "/node agent"` probe action through the existing authenticated Termux tool. The adapter source and installation instructions are included under `integrations/lorna3-onlineagent/`.
 
 The Forge API key remains strictly Termux-side; the public website only relays prompts and never stores or receives the online-agent key. Added shared prompt formatting and regression tests for routing, empty-prompt rejection, and the Lorna probe command. Termux installation still requires the connected phone workspace and its local environment variables.
+
+## LORNA 3 TUI dropdown and online-agent route — 2026-09-24 UTC
+
+Repaired the phone-side LORNA 3 Termux TUI so the route palette and Tab-completion dropdown expose both `@onlineagent` and its `@oa` alias. The TUI route executor now forwards those aliases directly to the LORNA 3 dispatcher and adds the standalone `omega-termux-lorna/lorna3` root to `sys.path`, allowing the dispatcher’s sibling `config` package to resolve correctly.
+
+Verification on the connected phone passed with `DROPDOWN_ROUTES=['@onlineagent', '@oa']`, matching completion results for both aliases, and an interactive `lorna3` test returned `l3-tui-oa-ok`. LORNA 2 was not modified by this repair and continues to work through `/node onlineagent`. No credential material was committed.
+
+The reproducible phone-side instructions are documented in `integrations/lorna3-onlineagent/LORNA3_TUI_ROUTE_PATCH.md`; the existing adapter installation guide now references the TUI step.
