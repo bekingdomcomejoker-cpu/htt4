@@ -322,3 +322,9 @@ The next source publication will push these changes to the existing `htt4` `main
 ## Follow-up release publication — 2026-09-24 UTC
 
 The follow-up source release was pushed to the existing private `htt4` repository on `main` as commit `f278a5f` (`Add streamed sandbox shell and repair Termux bridge`). The existing WebDev project checkpoint is `fc53f21f`. The working tree was clean immediately after the push; this entry records the final publication metadata for continuation.
+
+## Canonical hub deployment repair — 2026-09-24 UTC
+
+The Termux URL failure was traced to the separate private canonical-hub repository `bekingdomcomejoker-cpu/htt`, not the `htt4` website repository. The same normalization repair was applied to `htt/hub/vps.mjs`: absolute `http(s)` URLs are accepted with an optional `/mcp` suffix, while malformed relative values are rejected with a clear error. The canonical hub fix passed `node --check` and `git diff --check`, then was pushed to `htt` `main` as commit `fdf2414` (`Fix Termux MCP URL normalization`). Render’s repository configuration has `autoDeploy: true`, so the deployment should roll forward from that commit.
+
+The existing `htt4` website remains on the existing WebDev project and existing private `htt4` repository. No `htt5` repository or second site was created. The current session still has no attached persistent cloud computer (`persistent_vms` is absent and no computer connector is configured), so the Sandbox Shell remains temporary. To make it persistent, attach the already-purchased cloud computer through the computer control in the Manus session, then configure its authenticated endpoint in the existing WebDev secrets; do not create another website.
