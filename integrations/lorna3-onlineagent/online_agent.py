@@ -142,7 +142,7 @@ class OnlineAgentAdapter:
             )
         original_prompt = prompt.strip()
         normalized_prompt = original_prompt.casefold().replace("flashloght", "flashlight")
-        recent_user_text = " ".join(item["content"] for item in self.history[-6:] if item.get("role") == "user").casefold()
+        recent_user_text = " ".join(item["content"] for item in self.history[-6:] if item.get("role") == "user").casefold().replace("flashloght", "flashlight")
         flashlight_follow_up = bool(re.search(r"\b(off|turn it off|switch it off)\b", normalized_prompt) and "flashlight" in recent_user_text and re.search(r"\b(on|turned on|turn it on)\b", recent_user_text))
         flashlight_request = ("flashlight" in normalized_prompt or "torch" in normalized_prompt or flashlight_follow_up) and bool(re.search(r"\b(on|off|turn it on|turn it off|switch it on|switch it off)\b", normalized_prompt))
         if flashlight_request:

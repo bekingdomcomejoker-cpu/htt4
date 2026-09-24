@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { InvokeResult } from "./_core/llm";
+vi.mock("./_core/env", () => ({
+  ENV: { forgeApiUrl: "https://forge.example.test", forgeApiKey: "test-forge-key" },
+}));
 import { completeOmegaAssistant, extractAssistantText, normalizeAssistantMessages, MAX_PROMPT_CHARS } from "./assistant";
 
 function result(content: string): InvokeResult {
