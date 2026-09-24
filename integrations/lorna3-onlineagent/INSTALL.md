@@ -61,6 +61,8 @@ export ONLINE_AGENT_API_KEY="YOUR_FORGE_OR_MANUS_KEY"
 set -a; source ~/.online_agent_env; set +a
 ```
 
+The `~/bin/lorna3` launcher must source this file automatically before starting the TUI. Add `[ -f "$HOME/.online_agent_env" ] && . "$HOME/.online_agent_env"` immediately after `set -a`; otherwise manually sourced tests may work while a normal `lorna3` session returns HTTP 403.
+
 Alternate env names also accepted: `FORGE_BASE_URL`, `FORGE_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_API_KEY`.
 
 4. Smoke test:

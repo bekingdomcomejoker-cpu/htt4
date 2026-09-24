@@ -156,3 +156,7 @@ Repaired the phone-side LORNA 3 Termux TUI so the route palette and Tab-completi
 Verification on the connected phone passed with `DROPDOWN_ROUTES=['@onlineagent', '@oa']`, matching completion results for both aliases, and an interactive `lorna3` test returned `l3-tui-oa-ok`. LORNA 2 was not modified by this repair and continues to work through `/node onlineagent`. No credential material was committed.
 
 The reproducible phone-side instructions are documented in `integrations/lorna3-onlineagent/LORNA3_TUI_ROUTE_PATCH.md`; the existing adapter installation guide now references the TUI step.
+
+## LORNA 3 launcher credential loading — 2026-09-24 UTC
+
+Resolved the remaining standalone `lorna3` HTTP 403: the launcher was not sourcing the phone-local `~/.online_agent_env`, although manually sourced diagnostic sessions succeeded. The launcher now loads that file before starting the TUI. A real `~/bin/lorna3` session was verified with `@oa Reply with exactly: l3-launcher-env-ok`, returning the expected response. Credentials remain phone-local and are not committed.
