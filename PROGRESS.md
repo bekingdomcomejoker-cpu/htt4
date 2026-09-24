@@ -318,3 +318,7 @@ A persistent cloud node could not be attached in this session because no cloud-c
 Validation passed: `pnpm check`, `pnpm test` (**19 Vitest tests**), the live sandbox credential test, `python3 -m unittest integrations/lorna3-onlineagent/test_online_agent.py` (**2 tests**), `pnpm build`, `git diff --check`, and `node --check hub/vps.mjs`. The SSE bridge smoke test returned separate stdout, stderr, and completion events.
 
 The next source publication will push these changes to the existing `htt4` `main` branch and use the existing WebDev checkpoint workflow.
+
+## Follow-up release publication — 2026-09-24 UTC
+
+The follow-up source release was pushed to the existing private `htt4` repository on `main` as commit `f278a5f` (`Add streamed sandbox shell and repair Termux bridge`). The existing WebDev project checkpoint is `fc53f21f`. The working tree was clean immediately after the push; this entry records the final publication metadata for continuation.
