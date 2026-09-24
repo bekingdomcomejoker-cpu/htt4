@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { InvokeResult } from "./_core/llm";
 vi.mock("./_core/env", () => ({
-  ENV: { forgeApiUrl: "https://forge.example.test", forgeApiKey: "test-forge-key" },
+  ENV: { forgeApiUrl: "https://forge.example.test", forgeApiKey: "test-forge-key", localLlmApiUrl: "http://127.0.0.1:11434", localLlmApiKey: "" },
 }));
 import { completeOmegaAssistant, extractAssistantText, normalizeAssistantMessages, MAX_PROMPT_CHARS } from "./assistant";
 
@@ -27,6 +27,12 @@ describe("OMEGA assistant", () => {
   it("uses the server-side Forge transport and returns the assistant text", async () => {
     await expect(completeOmegaAssistant({ prompt: "Reply with exactly OMEGA_ASSISTANT_OK" })).resolves.toMatchObject({ model: "claude-sonnet-4-6", content: "OMEGA_ASSISTANT_OK", toolsUsed: 0, usage: { promptTokens: 12, completionTokens: 8, totalTokens: 20, requests: 1 } });
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/v1/chat/completions"), expect.objectContaining({ method: "POST", headers: expect.objectContaining({ "Content-Type": "application/json" }) }));
+  });
+
+  it("routes the local model through the Ollama-compatible endpoint", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...result("OMEGA_ASSISTANT_OK"), model: "qwen2.5:7b" }), { status: 200, headers: { "content-type": "application/json" } })));
+    await expect(completeOmegaAssistant({ model: "local-qwen2.5-7b", prompt: "Reply with exactly LOCAL_MODEL_OK" })).resolves.toMatchObject({ model: "qwen2.5:7b", content: "OMEGA_ASSISTANT_OK", usage: { requests: 1 } });
+    expect(fetch).toHaveBeenCalledWith("http://127.0.0.1:11434/v1/chat/completions", expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" } }));
   });
 
   it("injects bounded persistent memory into the system context", async () => {

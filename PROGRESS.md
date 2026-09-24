@@ -294,3 +294,9 @@ Added `claude-opus-4-6` to the shared Cloud CLI model catalog. The other models 
 Cloud CLI assistant responses now carry an aggregated usage record across the complete Forge/MCP tool loop: prompt tokens, completion tokens, total tokens, and number of Forge requests. The browser persists cumulative totals in local storage and displays total tokens and request count in the Model Chat header. This is intentionally browser-scoped accounting; it does not claim to be an account-wide Forge billing ledger.
 
 Added a persisted **Rotate models** switch. When enabled, each new prompt advances round-robin through the ten model entries while preserving the existing conversation, tool approval, memory, and voice flows. The actual responding model remains visible on each assistant bubble through the returned model field. Validation passed after the change: TypeScript check, all **15 Vitest tests**, **2** Online Agent Python regressions, and production build.
+
+## Local Ollama model — 2026-09-24 UTC
+
+Installed Ollama `0.34.3` in the current sandbox and pulled `qwen2.5:7b` (4.7 GB download; approximately 5.1 GB loaded in memory). The local API smoke test returned `LOCAL_7B_OK`. The model runs CPU-only in this environment; the verified response took approximately 17.5 seconds including model load.
+
+Added an optional `Local Qwen2.5 7B` model entry to the existing website source. When the website server runs on the same host as Ollama, selecting this model sends OpenAI-compatible requests to `LOCAL_LLM_API_URL` (default `http://127.0.0.1:11434`) using model `qwen2.5:7b`; `LOCAL_LLM_API_KEY` is optional. Forge remains the default provider for all existing models. The local provider is not reachable from the existing public WebDev deployment unless the deployed server is colocated with Ollama or given a secure private network path.

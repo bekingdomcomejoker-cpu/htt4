@@ -11,6 +11,7 @@ const SYSTEM_PROMPT =
     "You are the OMEGA cloud assistant. Be precise, practical, and honest about what you can or cannot execute. You may inspect mesh, Termux, and connected service state with the provided MCP tools. You may propose a Termux command, but the operator must explicitly approve it before execution. Never claim to have accessed an external system unless a tool result actually provided that information. Writes, deletes, deployments, inbox mutations, and network mutations are blocked from this assistant lane.";
 
 export const MODEL_OPTIONS = [
+  { id: "local-qwen2.5-7b", label: "Local Qwen2.5 7B", family: "Local / Ollama", description: "Private CPU model on the configured host" },
   { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", family: "Anthropic", description: "Balanced reasoning and coding" },
   { id: "claude-opus-4-6", label: "Claude Opus 4.6", family: "Anthropic", description: "High-capability reasoning" },
   { id: "claude-opus-4-7", label: "Claude Opus 4.7", family: "Anthropic", description: "Highest-capability reasoning" },
@@ -29,6 +30,8 @@ type ForgeMessage = Record<string, unknown>;
 type ForgeResponse = InvokeResult & { choices: Array<{ message: { role: string; content?: unknown; tool_calls?: Array<{ id: string; type: "function"; function: { name: string; arguments: string } }> }; finish_reason: string | null }> };
 
 type AssistantBody = { model?: unknown; messages?: unknown; prompt?: unknown; memoryContext?: unknown; bridge?: McpBridgeConfig };
+
+const LOCAL_MODEL_ID = "local-qwen2.5-7b" as const;
 
 export function isChatModel(value: unknown): value is ChatModel { return MODEL_OPTIONS.some((option) => option.id === value); }
 
@@ -53,7 +56,7 @@ export function extractAssistantText(result: ForgeResponse): string {
 }
 
 function modelToolRequest(model: ChatModel, messages: ForgeMessage[], tools?: ReturnType<typeof modelToolsForMcp>) {
-  const request: Record<string, unknown> = { model, messages };
+  const request: Record<string, unknown> = { model: model === LOCAL_MODEL_ID ? "qwen2.5:7b" : model, messages };
   if (tools?.length) {
     request.tools = tools;
     request.tool_choice = "auto";
@@ -64,12 +67,15 @@ function modelToolRequest(model: ChatModel, messages: ForgeMessage[], tools?: Re
 }
 
 async function forgeCompletion(model: ChatModel, messages: ForgeMessage[], tools?: ReturnType<typeof modelToolsForMcp>) {
-  const apiKey = ENV.forgeApiKey;
-  if (!apiKey) throw new Error("Forge backend is not configured on this deployment.");
-  const baseUrl = (ENV.forgeApiUrl || "https://forge.manus.ai").replace(/\/+$/, "");
+  const isLocal = model === LOCAL_MODEL_ID;
+  const apiKey = isLocal ? ENV.localLlmApiKey : ENV.forgeApiKey;
+  if (!isLocal && !apiKey) throw new Error("Forge backend is not configured on this deployment.");
+  const baseUrl = (isLocal ? ENV.localLlmApiUrl : ENV.forgeApiUrl || "https://forge.manus.ai").replace(/\/+$/, "");
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   const response = await fetch(`${baseUrl}/v1/chat/completions`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(modelToolRequest(model, messages, tools)),
   });
   const result = await response.json().catch(() => null) as ForgeResponse | { error?: { message?: string } } | null;
