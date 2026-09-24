@@ -334,3 +334,11 @@ The existing `htt4` website remains on the existing WebDev project and existing 
 The attached handoff was reviewed. It contains repository inventory and recommendations for a possible `htt4` database migration, UI-tab comparison, and rotation of a previously shared key, but it does **not** contain a persistent cloud-node identifier, SSH access details, server runtime credentials, database credentials, or a deployable server configuration. No server was provisioned from the attachment, and no credentials were invented or copied.
 
 Persistent OMEGA server setup remains pending until the already-purchased cloud computer is attached to the Manus session or a new target plan is explicitly selected. Once attached, configure the existing OMEGA hub, sandbox bridge, auto-start supervision, and WebDev endpoint in this release rather than creating another repository or website.
+
+## Cross-release capability audit — 2026-09-24 UTC
+
+Audited the public `htt`, `htt2`, `htt3`, and `htt4` release repositories against the requested tab matrix. The current `htt4` source already contains the verified working superset from the full-stack releases; no additional component copy was necessary in this pass. Its navigation and server architecture include Overview, Terminal, Cloud CLI, Cloud Local CLI, Sandbox Shell, HTT3 Pipeline, Model Chat, Node Mesh, Files, Network, MikroTik, Tools, and Inbox. Assistant support remains available through the existing assistant/model-chat server path.
+
+The synchronized architecture includes `ModelChatView`, `PipelineView`, `SandboxShellView`, `server/pipeline.ts`, `server/pipelineRouter.ts`, `server/sandboxShell.ts`, `shared/onlineAgent.ts`, `shared/operatorSession.ts`, the LORNA Online Agent adapter, the authenticated sandbox bridge, and the associated regression tests. The existing Node Mesh, Files, Network, MikroTik, Tools, Inbox, and Assistant paths were retained. `htt4` remains the canonical website release; `htt` remains the canonical hub release.
+
+Requested matrix status in `htt4`: Overview **present**, Sandbox Shell **present**, HTT3 Pipeline **present**, Model Chat **present**, Node Mesh **present** (labelled Mesh), Files **present**, Network **present**, MikroTik **present**, Tools **present**, Inbox **present**, and Assistant **present**. No new repository or website was created.
