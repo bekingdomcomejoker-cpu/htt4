@@ -306,3 +306,15 @@ Added an optional `Local Qwen2.5 7B` model entry to the existing website source.
 Added a dedicated **Cloud Local CLI** navigation tab to the existing OMEGA Operator interface. It reuses the authenticated Model Chat surface but filters the catalog to the local `Local Qwen2.5 7B` provider, automatically opens that local conversation, and labels the view as private Ollama-hosted inference. The regular **Model Chat** tab continues to show the complete Forge plus local model catalog, including Qwen in rotation mode.
 
 Validation passed after the UI change: TypeScript check, all **16 Vitest tests**, **2** Online Agent Python regressions, production build, and `git diff --check`.
+
+## Sandbox Shell reverse link and Termux URL repair — 2026-09-24 UTC
+
+Kept the work on the existing private `bekingdomcomejoker-cpu/htt4` repository and the existing `htt4-webdev` WebDev project; no `htt5` repository or second website was created. The website now includes a **Sandbox Shell** tab backed by the current session’s authenticated sandbox bridge. The bridge provides a health endpoint, bounded shell execution, and SSE output for live stdout/stderr chunks. The browser keeps the last 30 commands in session-local history and can restore any previous command without sending credentials to the client-side bridge.
+
+The Termux hub connector was repaired in `hub/vps.mjs`. Absolute `http(s)` MCP base URLs are normalized by removing an optional trailing `/mcp`; malformed relative values such as `/mcp` are rejected with an actionable configuration error instead of producing `Failed to parse URL from /mcp`. This is the source-level fix for the current `termuxLastError` observed in the canonical hub.
+
+A persistent cloud node could not be attached in this session because no cloud-computer attachment or management connector is present. The Sandbox Shell therefore remains explicitly session-scoped and temporary; the existing website and repository remain the durable artifacts. Attaching a persistent node later should replace `SANDBOX_SHELL_URL` and `SANDBOX_SHELL_KEY` with the persistent node’s authenticated endpoint without creating a new site.
+
+Validation passed: `pnpm check`, `pnpm test` (**19 Vitest tests**), the live sandbox credential test, `python3 -m unittest integrations/lorna3-onlineagent/test_online_agent.py` (**2 tests**), `pnpm build`, `git diff --check`, and `node --check hub/vps.mjs`. The SSE bridge smoke test returned separate stdout, stderr, and completion events.
+
+The next source publication will push these changes to the existing `htt4` `main` branch and use the existing WebDev checkpoint workflow.

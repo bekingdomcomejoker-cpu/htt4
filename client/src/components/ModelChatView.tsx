@@ -173,6 +173,8 @@ export function ModelChatView({
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
+  const [streamContent, setStreamContent] = useState("");
+  const [streamBusy, setStreamBusy] = useState(false);
   const [memoryDraft, setMemoryDraft] = useState("");
   const [pendingCommand, setPendingCommand] = useState<{
     name: string;
@@ -220,6 +222,7 @@ export function ModelChatView({
     { enabled: conversationId !== null },
   );
   const memoriesQuery = trpc.chat.memories.useQuery({ clientId });
+  const providerHealthQuery = trpc.chat.providerHealth.useQuery({ model: selectedModelId as never }, { enabled: selectedModelId === "local-qwen2.5-7b", refetchInterval: 30000 });
 
   const models: ModelOption[] = modelsQuery.data ? Array.from(modelsQuery.data as readonly ModelOption[]).filter((model) => !allowedModelIds || allowedModelIds.includes(model.id)) : [];
   const conversations: Conversation[] = (conversationsQuery.data as Conversation[]) || [];
@@ -328,6 +331,7 @@ export function ModelChatView({
   const selectedModel = models.find((m) => m.id === selectedModelId) || null;
   const busy =
     askConversation.isPending ||
+    streamBusy ||
     executeCommand.isPending ||
     createConversation.isPending;
 
@@ -480,6 +484,10 @@ export function ModelChatView({
     }
     const modelForRequest = rotationEnabled && models.length > 0 ? models[rotationIndex % models.length].id : selectedModelId;
     if (rotationEnabled && models.length > 0) setRotationIndex((index) => index + 1);
+    if (modelForRequest === "local-qwen2.5-7b") {
+      void streamLocalMessage(text);
+      return;
+    }
     askConversation.mutate({
       clientId,
       conversationId,
@@ -487,6 +495,49 @@ export function ModelChatView({
       prompt: text,
       bridge: { url: client.url, key: client.key },
     });
+  }
+
+  async function streamLocalMessage(text: string) {
+    setStreamBusy(true);
+    setStreamContent("");
+    setDraft("");
+    try {
+      const response = await fetch("/api/local-llm/stream", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientId, conversationId, prompt: text }) });
+      if (!response.ok || !response.body) throw new Error((await response.text().catch(() => "")) || `Local stream failed (${response.status})`);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const event = JSON.parse(line.slice(6));
+          if (event.error) throw new Error(event.error);
+          if (event.token) setStreamContent((current) => current + event.token);
+          if (event.usage) {
+            const usage = event.usage;
+            setUsageTotals((previous) => {
+              const next = { promptTokens: previous.promptTokens + (usage.prompt_tokens || 0), completionTokens: previous.completionTokens + (usage.completion_tokens || 0), totalTokens: previous.totalTokens + (usage.total_tokens || 0), requests: previous.requests + 1 };
+              try { localStorage.setItem(USAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+              return next;
+            });
+          }
+        }
+      }
+      await utils.chat.messages.invalidate({ clientId, conversationId: conversationId! });
+      await utils.chat.conversations.invalidate({ clientId });
+      setStreamContent("");
+      notify("Local Qwen stream complete");
+    } catch (error) {
+      setStreamContent("");
+      notify(error instanceof Error ? error.message : "Local stream failed");
+    } finally {
+      setStreamBusy(false);
+    }
   }
 
   function toggleRotation() {
@@ -554,6 +605,7 @@ export function ModelChatView({
               {rotationEnabled ? "Rotate on" : "Rotate models"}
             </button>
             <span className="mc-usage" title="Browser-scoped Forge usage recorded from response usage fields">{usageTotals.totalTokens.toLocaleString()} tokens · {usageTotals.requests} requests</span>
+            {selectedModelId === "local-qwen2.5-7b" && <span className={`mc-provider-status ${providerHealthQuery.data?.ok ? "ok" : "down"}`} title={providerHealthQuery.data?.error || "Local provider health"}>{providerHealthQuery.isFetching ? "checking local…" : providerHealthQuery.data?.ok ? `local ${providerHealthQuery.data.latencyMs}ms` : "local offline"}</span>}
           </div>
         }
       />
@@ -728,6 +780,7 @@ export function ModelChatView({
                     </div>
                   );
                 })}
+                {streamContent && <div className="mc-bubble-row theirs"><div className="mc-bubble theirs typing"><div className="mc-bubble-model">qwen2.5:7b · streaming</div><ChatMessageContent content={streamContent} /></div></div>}
                 {busy && (
                   <div className="mc-bubble-row theirs">
                     <div className="mc-bubble theirs typing">

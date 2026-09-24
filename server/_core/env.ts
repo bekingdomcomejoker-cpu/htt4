@@ -9,4 +9,6 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   localLlmApiUrl: process.env.LOCAL_LLM_API_URL ?? "http://127.0.0.1:11434",
   localLlmApiKey: process.env.LOCAL_LLM_API_KEY ?? "",
+  sandboxShellUrl: process.env.SANDBOX_SHELL_URL ?? "",
+  sandboxShellKey: process.env.SANDBOX_SHELL_KEY ?? "",
 };

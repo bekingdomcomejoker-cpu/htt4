@@ -3,7 +3,7 @@ import type { InvokeResult } from "./_core/llm";
 vi.mock("./_core/env", () => ({
   ENV: { forgeApiUrl: "https://forge.example.test", forgeApiKey: "test-forge-key", localLlmApiUrl: "http://127.0.0.1:11434", localLlmApiKey: "" },
 }));
-import { completeOmegaAssistant, extractAssistantText, normalizeAssistantMessages, MAX_PROMPT_CHARS } from "./assistant";
+import { checkLocalProvider, completeOmegaAssistant, extractAssistantText, normalizeAssistantMessages, MAX_PROMPT_CHARS } from "./assistant";
 
 function result(content: string): InvokeResult {
   return { id: "test-response", created: 0, model: "claude-sonnet-4-6", choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }], usage: { prompt_tokens: 12, completion_tokens: 8, total_tokens: 20 } };
@@ -33,6 +33,21 @@ describe("OMEGA assistant", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...result("OMEGA_ASSISTANT_OK"), model: "qwen2.5:7b" }), { status: 200, headers: { "content-type": "application/json" } })));
     await expect(completeOmegaAssistant({ model: "local-qwen2.5-7b", prompt: "Reply with exactly LOCAL_MODEL_OK" })).resolves.toMatchObject({ model: "qwen2.5:7b", content: "OMEGA_ASSISTANT_OK", usage: { requests: 1 } });
     expect(fetch).toHaveBeenCalledWith("http://127.0.0.1:11434/v1/chat/completions", expect.objectContaining({ method: "POST", headers: { "Content-Type": "application/json" } }));
+  });
+
+  it("reports local provider health and latency", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ data: [{ id: "qwen2.5:7b" }] }), { status: 200, headers: { "content-type": "application/json" } })));
+    await expect(checkLocalProvider()).resolves.toMatchObject({ ok: true, model: "qwen2.5:7b", endpoint: "http://127.0.0.1:11434", latencyMs: expect.any(Number) });
+  });
+
+  it("authenticates against the configured live Ollama endpoint", async () => {
+    const endpoint = process.env.LOCAL_LLM_API_URL;
+    const key = process.env.LOCAL_LLM_API_KEY;
+    if (!endpoint || !key || endpoint.includes("127.0.0.1")) return;
+    vi.unstubAllGlobals();
+    const response = await fetch(`${endpoint}/v1/models`, { headers: { Authorization: `Bearer ${key}` } });
+    expect(response.ok).toBe(true);
+    expect((await response.json()).data.some((model: { id?: string }) => model.id === "qwen2.5:7b")).toBe(true);
   });
 
   it("injects bounded persistent memory into the system context", async () => {

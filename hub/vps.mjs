@@ -158,6 +158,19 @@ function logLine(entry) {
   }
 }
 
+function normaliseMcpBaseUrl(raw) {
+  const value = String(raw || "").trim().replace(/\/+$/, "");
+  if (!value) return "";
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    parsed.pathname = parsed.pathname.replace(/\/mcp$/i, "").replace(/\/+$/, "");
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
 function loadConfig() {
   mkdirSync(ROOT, { recursive: true });
   const envConfig = {
@@ -198,6 +211,7 @@ function loadConfig() {
 }
 
 const config = loadConfig();
+config.termux = { ...(config.termux || {}), url: normaliseMcpBaseUrl(config.termux?.url) };
 const startedAt = Date.now();
 
 const state = {
@@ -344,7 +358,8 @@ function runShell(command, timeoutSec = 15) {
 }
 
 async function termuxFetch(body, sessionId) {
-  const url = `${config.termux.url.replace(/\/$/, "")}/mcp`;
+  if (!config.termux.url) throw new Error("Termux MCP URL is missing or invalid; expected an absolute http(s) URL");
+  const url = `${config.termux.url}/mcp`;
   const headers = {
     "content-type": "application/json",
     accept: "application/json, text/event-stream",

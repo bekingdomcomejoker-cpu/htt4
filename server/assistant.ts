@@ -35,6 +35,40 @@ const LOCAL_MODEL_ID = "local-qwen2.5-7b" as const;
 
 export function isChatModel(value: unknown): value is ChatModel { return MODEL_OPTIONS.some((option) => option.id === value); }
 
+export type ProviderHealth = { ok: boolean; model: string; endpoint: string; latencyMs: number | null; error?: string };
+
+function localEndpoint(): string {
+  return (ENV.localLlmApiUrl || "http://127.0.0.1:11434").replace(/\/+$/, "");
+}
+
+function localHeaders(): Record<string, string> {
+  return ENV.localLlmApiKey ? { Authorization: `Bearer ${ENV.localLlmApiKey}` } : {};
+}
+
+export async function checkLocalProvider(): Promise<ProviderHealth> {
+  const started = Date.now();
+  const endpoint = localEndpoint();
+  try {
+    const response = await fetch(`${endpoint}/v1/models`, { headers: localHeaders(), signal: AbortSignal.timeout(10000) });
+    const payload = await response.json().catch(() => null) as { data?: Array<{ id?: string }> } | null;
+    if (!response.ok) throw new Error(`Provider returned ${response.status}`);
+    const available = payload?.data?.some((model) => model.id === "qwen2.5:7b");
+    if (!available) throw new Error("qwen2.5:7b is not available");
+    return { ok: true, model: "qwen2.5:7b", endpoint, latencyMs: Date.now() - started };
+  } catch (error) {
+    return { ok: false, model: "qwen2.5:7b", endpoint, latencyMs: Date.now() - started, error: error instanceof Error ? error.message : "Provider unavailable" };
+  }
+}
+
+export async function streamLocalOmegaAssistant(messages: Message[], memoryContext: string): Promise<Response> {
+  const systemContent = memoryContext ? `${SYSTEM_PROMPT}\n\nPersistent operator memory (use only when relevant; do not invent or overwrite it):\n${memoryContext.slice(0, 12000)}` : SYSTEM_PROMPT;
+  return fetch(`${localEndpoint()}/v1/chat/completions`, {
+    method: "POST",
+    headers: { ...localHeaders(), "Content-Type": "application/json", Accept: "text/event-stream" },
+    body: JSON.stringify({ model: "qwen2.5:7b", messages: [{ role: "system", content: systemContent }, ...messages], max_tokens: MAX_OUTPUT_TOKENS, stream: true }),
+  });
+}
+
 export function normalizeAssistantMessages(body: unknown): Message[] {
   const payload = body && typeof body === "object" ? body as AssistantBody : {};
   const requestedMessages = Array.isArray(payload.messages) ? payload.messages : [{ role: "user", content: payload.prompt }];
