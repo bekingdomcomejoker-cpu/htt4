@@ -138,3 +138,15 @@ printf '@oa You MUST call the read-only MCP tool battery_status now with an empt
 ```
 
 Both routes must return a live JSON battery record from the connected phone. Do not commit `.online_agent_env`, MCP token files, or Forge credentials.
+
+## Shared LORNA memory
+
+The online-agent route now uses the same LORNA facts backend as the local agent: `~/.lorna_v2/facts.json`, implemented by `Lorna/agents/lorna_memory.py`. The supervised `omega-mcp` bridge exposes three phone-local tools: `lorna_remember`, `lorna_memory_context`, and `lorna_forget`. The Forge adapter is instructed to call these tools for explicit remember, recall, and forget requests; follow-up device requests can then use the recalled preference while still calling the relevant device tool.
+
+After updating `omega_mcp_bridge.py`, restart the supervised service and verify the persisted flow:
+
+```bash
+sv restart omega-mcp
+printf '/node onlineagent\nRemember exactly this preference: when I say turn it off after turning on the flashlight, turn the flashlight off.\nWhat do you remember about turning it off after the flashlight is on?\n/quit\n' | lorna2
+grep -n flashlight "$HOME/.lorna_v2/facts.json"
+```

@@ -176,3 +176,7 @@ The Node 4 adapter package now documents the two-file installation, phone-local 
 Added durable, browser-scoped operator memory to Model Chat. The new `chatMemories` table stores up to 2,000 characters per memory against the existing browser client ID; the UI can save, list, and delete entries from the Model Chat sidebar. Before each assistant request, the server loads the client’s saved memories and injects a bounded, clearly labeled memory context into the server-side system prompt. Existing conversation history and MCP approval behavior remain unchanged.
 
 The migration was applied non-destructively to the Node 4 database with `CREATE TABLE IF NOT EXISTS`. TypeScript validation passed, all **14 Vitest tests passed**, the production build passed, and the Python online-agent adapter checks passed. No memory contents or credentials were added to source control.
+
+## Termux shared-memory repair — 2026-09-24 UTC
+
+The Termux online-agent route is now linked to LORNA’s existing `~/.lorna_v2/facts.json` backend through three supervised MCP bridge tools: `lorna_remember`, `lorna_memory_context`, and `lorna_forget`. The online-agent system prompt requires those tools for explicit memory operations. After fixing one `_Path` import alias in the bridge helper and restarting `omega-mcp`, the real LORNA 2 flow saved and recalled the flashlight preference successfully; the fact is present in the canonical facts file. The local `/node agent` route remains untouched.
