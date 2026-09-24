@@ -286,3 +286,11 @@ The source validation initially identified a reproducibility problem: the assist
 The phone-side adapter now normalizes the observed `flashloght` typo in its retained conversation history as well as in the current message. Consequently, `turn it off` resolves correctly after a typo-based flashlight-on request. New offline Python regression coverage verifies that a memory request calls `lorna_remember` and that the typo-on / follow-up-off flow invokes `flashlight_control` with `on` and then `off`. The tests use in-process LORNA and MCP stand-ins; no phone connection, token, or Forge credential is required.
 
 Validation passed: `pnpm check`, `pnpm test` (**15 Vitest tests**), `python3 -m unittest integrations/lorna3-onlineagent/test_online_agent.py` (**2 tests**), `pnpm build`, Python syntax checks, and `git diff --check`. The build retains only the pre-existing Vite analytics-placeholder and large-chunk warnings. The verified source repair is commit `023f1239056abb9642ceb76edc56f1d03b502889` (`Harden Online Agent regression coverage`).
+
+## Cloud CLI model rotation and token accounting — 2026-09-24 UTC
+
+Added `claude-opus-4-6` to the shared Cloud CLI model catalog. The other models returned by the current live Forge catalog—`gpt-5-nano`, `gpt-5-mini`, `gpt-5`, `gpt-5.5`, `gemini-3-flash-preview`, and `gemini-3.1-pro-preview`—were already present in the application list. Cloud CLI now has ten selectable model entries in total.
+
+Cloud CLI assistant responses now carry an aggregated usage record across the complete Forge/MCP tool loop: prompt tokens, completion tokens, total tokens, and number of Forge requests. The browser persists cumulative totals in local storage and displays total tokens and request count in the Model Chat header. This is intentionally browser-scoped accounting; it does not claim to be an account-wide Forge billing ledger.
+
+Added a persisted **Rotate models** switch. When enabled, each new prompt advances round-robin through the ten model entries while preserving the existing conversation, tool approval, memory, and voice flows. The actual responding model remains visible on each assistant bubble through the returned model field. Validation passed after the change: TypeScript check, all **15 Vitest tests**, **2** Online Agent Python regressions, and production build.

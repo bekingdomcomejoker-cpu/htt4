@@ -151,6 +151,9 @@ function Badge({
 }
 
 const AUTO_SPEAK_KEY = "omega-model-chat-auto-speak";
+const ROTATION_KEY = "omega-model-chat-rotation";
+const USAGE_KEY = "omega-model-chat-usage";
+type UsageTotals = { promptTokens: number; completionTokens: number; totalTokens: number; requests: number };
 
 export function ModelChatView({
   client,
@@ -185,6 +188,17 @@ export function ModelChatView({
       return false;
     }
   });
+  const [rotationEnabled, setRotationEnabled] = useState(() => {
+    try { return localStorage.getItem(ROTATION_KEY) === "1"; } catch { return false; }
+  });
+  const [rotationIndex, setRotationIndex] = useState(0);
+  const [usageTotals, setUsageTotals] = useState<UsageTotals>(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(USAGE_KEY) || "null");
+      if (parsed && typeof parsed === "object") return { promptTokens: Number(parsed.promptTokens) || 0, completionTokens: Number(parsed.completionTokens) || 0, totalTokens: Number(parsed.totalTokens) || 0, requests: Number(parsed.requests) || 0 };
+    } catch { /* ignore */ }
+    return { promptTokens: 0, completionTokens: 0, totalTokens: 0, requests: 0 };
+  });
   const [voiceSupport] = useState(() => detectVoiceSupport());
   const threadEndRef = useRef<HTMLDivElement | null>(null);
   const creatingRef = useRef(false);
@@ -218,6 +232,18 @@ export function ModelChatView({
 
   const askConversation = trpc.chat.ask.useMutation({
     onSuccess: async (result) => {
+      if (result.usage) {
+        setUsageTotals((previous) => {
+          const next = {
+            promptTokens: previous.promptTokens + result.usage.promptTokens,
+            completionTokens: previous.completionTokens + result.usage.completionTokens,
+            totalTokens: previous.totalTokens + result.usage.totalTokens,
+            requests: previous.requests + result.usage.requests,
+          };
+          try { localStorage.setItem(USAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+          return next;
+        });
+      }
       if (result.pendingTool) {
         setPendingCommand(result.pendingTool as { name: string; arguments: Record<string, unknown> });
       } else {
@@ -442,12 +468,23 @@ export function ModelChatView({
       listenHandle.current?.stop();
       setListening(false);
     }
+    const modelForRequest = rotationEnabled && models.length > 0 ? models[rotationIndex % models.length].id : selectedModelId;
+    if (rotationEnabled && models.length > 0) setRotationIndex((index) => index + 1);
     askConversation.mutate({
       clientId,
       conversationId,
-      model: selectedModelId as never,
+      model: modelForRequest as never,
       prompt: text,
       bridge: { url: client.url, key: client.key },
+    });
+  }
+
+  function toggleRotation() {
+    setRotationEnabled((previous) => {
+      const next = !previous;
+      try { localStorage.setItem(ROTATION_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+      notify(next ? "Round-robin rotation enabled" : "Rotation disabled");
+      return next;
     });
   }
 
@@ -501,8 +538,12 @@ export function ModelChatView({
               </button>
             )}
             <Badge tone={selectedModel ? "live" : "neutral"}>
-              {selectedModel ? selectedModel.label : "PICK A MODEL"}
+              {rotationEnabled ? `ROTATING · ${models.length} MODELS` : selectedModel ? selectedModel.label : "PICK A MODEL"}
             </Badge>
+            <button type="button" className={`mc-toggle ${rotationEnabled ? "on" : ""}`} onClick={toggleRotation} title="Rotate each request through the model catalog">
+              {rotationEnabled ? "Rotate on" : "Rotate models"}
+            </button>
+            <span className="mc-usage" title="Browser-scoped Forge usage recorded from response usage fields">{usageTotals.totalTokens.toLocaleString()} tokens · {usageTotals.requests} requests</span>
           </div>
         }
       />

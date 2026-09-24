@@ -12,6 +12,7 @@ const SYSTEM_PROMPT =
 
 export const MODEL_OPTIONS = [
   { id: "claude-sonnet-4-6", label: "Claude Sonnet 4.6", family: "Anthropic", description: "Balanced reasoning and coding" },
+  { id: "claude-opus-4-6", label: "Claude Opus 4.6", family: "Anthropic", description: "High-capability reasoning" },
   { id: "claude-opus-4-7", label: "Claude Opus 4.7", family: "Anthropic", description: "Highest-capability reasoning" },
   { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", family: "Anthropic", description: "Fast everyday responses" },
   { id: "gpt-5.5", label: "GPT-5.5", family: "OpenAI", description: "Flagship reasoning and coding" },
@@ -84,6 +85,7 @@ export async function completeOmegaAssistant(body: unknown) {
 
   let mcpTools: ReturnType<typeof modelToolsForMcp> = [];
   let mcpSession: string | null = null;
+  const usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0, requests: 0 };
   const bridge = payload.bridge && typeof payload.bridge === "object" ? payload.bridge : undefined;
   if (bridge?.url && bridge.key) {
     const discovered = await discoverAssistantTools(bridge);
@@ -97,13 +99,17 @@ export async function completeOmegaAssistant(body: unknown) {
   let toolCalls = 0;
   for (let round = 0; round <= MAX_MCP_ROUNDS; round += 1) {
     const result = await forgeCompletion(model, transcript, mcpTools);
+    usage.promptTokens += result.usage?.prompt_tokens || 0;
+    usage.completionTokens += result.usage?.completion_tokens || 0;
+    usage.totalTokens += result.usage?.total_tokens || 0;
+    usage.requests += 1;
     const assistantMessage = result.choices[0]?.message;
     if (!assistantMessage) throw new Error("Forge returned an empty response.");
     const calls = assistantMessage.tool_calls || [];
     if (!calls.length || !bridge) {
       const content = extractAssistantText(result);
       if (!content) throw new Error("Forge returned an empty response.");
-      return { model: result.model || model, content, toolsUsed: toolCalls };
+      return { model: result.model || model, content, toolsUsed: toolCalls, usage };
     }
     transcript.push({ role: "assistant", content: assistantMessage.content ?? null, tool_calls: calls });
     for (const call of calls.slice(0, 4)) {
@@ -112,8 +118,8 @@ export async function completeOmegaAssistant(body: unknown) {
       try { args = JSON.parse(call.function.arguments || "{}"); } catch { args = {}; }
       if (isCommandTool(call.function.name)) {
         const command = typeof args.command === "string" ? args.command.trim() : "";
-        if (!command) return { model: result.model || model, content: "The assistant proposed an empty Termux command, so nothing was executed.", toolsUsed: toolCalls, pendingTool: null };
-        return { model: result.model || model, content: `Command approval required before execution:\n\n\`${command}\``, toolsUsed: toolCalls, pendingTool: { name: call.function.name, arguments: args } };
+        if (!command) return { model: result.model || model, content: "The assistant proposed an empty Termux command, so nothing was executed.", toolsUsed: toolCalls, pendingTool: null, usage };
+        return { model: result.model || model, content: `Command approval required before execution:\n\n\`${command}\``, toolsUsed: toolCalls, pendingTool: { name: call.function.name, arguments: args }, usage };
       }
       const toolResult = await callAssistantTool(bridge, mcpSession, call.function.name, args);
       mcpSession = toolResult.session;
